@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Heating Cost Calculator — Basic v14</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;0,9..144,800;1,9..144,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1814;
+    --paper: #f4ede1;
+    --paper-deep: #ebe1cf;
+    --rule: #2b2620;
+    --accent: #c8431f;
+    --accent-deep: #8a2d12;
+    --cool: #2c4a52;
+    --warm: #d4a548;
+    --green: #4a6e3a;
+    --grid: rgba(43, 38, 32, 0.06);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 2rem 1.5rem;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 24px 24px;
+    overflow-x: hidden;
+  }
+
+  .container { max-width: 1180px; margin: 0 auto; }
+
+  /* ==== MODE TOGGLE BUTTON ==== */
+  .mode-toggle {
+    position: fixed;
+    top: 1.25rem;
+    left: 1.25rem;
+    z-index: 100;
+    background: var(--ink);
+    color: var(--paper);
+    border: 2px solid var(--ink);
+    padding: 0.6rem 0.95rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.15s ease;
+    box-shadow: 3px 3px 0 var(--accent);
+  }
+
+  .mode-toggle:hover {
+    background: var(--accent);
+    border-color: var(--accent-deep);
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0 var(--accent-deep);
+  }
+
+  .mode-toggle .icon {
+    width: 14px;
+    height: 20px;
+    border: 1.5px solid currentColor;
+    border-radius: 3px;
+    position: relative;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+
+  .mode-toggle .icon::before {
+    content: "";
+    position: absolute;
+    bottom: 2px; left: 50%;
+    transform: translateX(-50%);
+    width: 4px; height: 1.5px;
+    background: currentColor;
+  }
+
+  body.mobile-mode .mode-toggle .icon {
+    width: 22px;
+    height: 16px;
+  }
+
+  body.mobile-mode .mode-toggle .icon::before {
+    bottom: -5px;
+    width: 10px; height: 2px;
+    border-radius: 1px;
+  }
+
+  @media (max-width: 600px) {
+    body { padding-top: 4rem; }
+    .mode-toggle { top: 0.75rem; left: 0.75rem; padding: 0.5rem 0.75rem; font-size: 0.65rem; }
+  }
+
+  /* ==== HEADER ==== */
+  header {
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 1.5rem;
+    margin-bottom: 2.5rem;
+    margin-top: 2.5rem;
+    position: relative;
+  }
+
+  .meta-bar {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    margin-bottom: 1rem;
+    opacity: 0.7;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .meta-bar span::before { content: "■ "; color: var(--accent); }
+
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 800;
+    font-size: clamp(2.5rem, 6vw, 4.5rem);
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+    margin-bottom: 0.5rem;
+  }
+
+  h1 em { font-style: italic; font-weight: 400; color: var(--accent); }
+
+  .subtitle {
+    font-size: 0.85rem;
+    max-width: 600px;
+    line-height: 1.6;
+    opacity: 0.75;
+  }
+
+  /* ==== MAIN GRID ==== */
+  .workspace {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 2rem;
+    align-items: start;
+  }
+
+  @media (max-width: 880px) {
+    .workspace { grid-template-columns: 1fr; }
+  }
+
+  /* ==== INPUT PANEL ==== */
+  .panel {
+    background: var(--paper-deep);
+    border: 1.5px solid var(--ink);
+    padding: 1.75rem;
+    position: relative;
+  }
+
+  .panel::before {
+    content: "";
+    position: absolute;
+    top: -1.5px; left: -1.5px; right: -1.5px;
+    height: 6px;
+    background: var(--ink);
+  }
+
+  .panel-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.25em;
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .panel-label::after {
+    content: "";
+    flex: 1;
+    border-bottom: 1px dashed var(--ink);
+    opacity: 0.4;
+  }
+
+  /* ==== FUEL SELECTOR GRID ==== */
+  .fuel-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .fuel-btn {
+    background: var(--paper);
+    border: 1px solid var(--ink);
+    padding: 0.85rem 0.6rem;
+    font-family: inherit;
+    font-size: 0.72rem;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s ease;
+    line-height: 1.3;
+  }
+
+  .fuel-btn:hover { background: var(--ink); color: var(--paper); }
+
+  .fuel-btn.active {
+    background: var(--accent);
+    color: var(--paper);
+    border-color: var(--accent-deep);
+  }
+
+  .fuel-btn .sub {
+    display: block;
+    font-size: 0.6rem;
+    opacity: 0.6;
+    margin-top: 0.3rem;
+    letter-spacing: 0.05em;
+  }
+
+  .fuel-btn.active .sub { opacity: 0.9; }
+
+  .fuel-btn .monthly-cost {
+    display: block;
+    font-size: 0.65rem;
+    font-weight: 500;
+    margin-top: 0.5rem;
+    opacity: 0.75;
+    color: var(--accent);
+  }
+
+  .fuel-btn.active .monthly-cost {
+    opacity: 1;
+    color: var(--paper);
+  }
+
+  .fuel-name {
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* ==== INPUT FIELDS ==== */
+  .field-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .field { display: flex; flex-direction: column; }
+
+  .field label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 0.4rem;
+    opacity: 0.7;
+  }
+
+  .field-hint {
+    font-size: 0.6rem;
+    opacity: 0.55;
+    margin-top: 0.3rem;
+    text-transform: none;
+    letter-spacing: 0.02em;
+    line-height: 1.4;
+  }
+
+  .field input, .field select {
+    background: var(--paper);
+    border: 1px solid var(--ink);
+    padding: 0.7rem 0.8rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.95rem;
+    color: var(--ink);
+    transition: border-color 0.15s, box-shadow 0.15s;
+    width: 100%;
+  }
+
+  .field input:focus, .field select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 3px 3px 0 var(--accent);
+  }
+
+  .reset-price-btn {
+    background: var(--paper);
+    border: 1px solid var(--ink);
+    padding: 0.5rem 0.8rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    margin-top: 0.5rem;
+    transition: all 0.15s ease;
+  }
+
+  .reset-price-btn:hover {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  #price-source-tag {
+    font-size: 0.6rem;
+    opacity: 0.6;
+    font-style: italic;
+    text-transform: none;
+    letter-spacing: 0.02em;
+    margin-left: 0.4rem;
+  }
+
+  #price-source-tag.custom {
+    font-size: 0.8rem;
+    color: #c8431f;
+    opacity: 1;
+    font-weight: 600;
+    font-style: italic;
+  }
+
+  .field-full { grid-column: 1 / -1; }
+
+  /* ==== INPUT WITH PREFIX/SUFFIX ==== */
+  .input-prefix {
+    display: flex;
+    align-items: stretch;
+  }
+
+  .input-prefix .prefix {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 0.7rem 0.7rem;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--ink);
+    border-right: none;
+  }
+
+  .input-prefix input { flex: 1; border-left: none; }
+
+  .input-prefix .suffix {
+    background: var(--paper);
+    color: var(--ink);
+    padding: 0.7rem 0.7rem;
+    font-size: 0.7rem;
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--ink);
+    border-left: none;
+    opacity: 0.7;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+
+  /* ==== INPUT MODE TABS ==== */
+  .input-tabs {
+    display: flex;
+    border: 1px solid var(--ink);
+    margin-bottom: 1rem;
+  }
+
+  .input-tabs button {
+    flex: 1;
+    background: var(--paper);
+    border: none;
+    border-right: 1px solid var(--ink);
+    padding: 0.6rem 0.5rem;
+    font-family: inherit;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    cursor: pointer;
+    color: var(--ink);
+    transition: all 0.15s ease;
+  }
+
+  .input-tabs button:last-child { border-right: none; }
+
+  .input-tabs button.active {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .input-tabs button:hover:not(.active) {
+    background: var(--paper-deep);
+  }
+
+  /* Mode panels */
+  .mode-panel { display: none; }
+  .mode-panel.active { display: block; }
+
+  /* ==== HOME PROFILE GRID ==== */
+  .profile-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .profile-btn {
+    background: var(--paper);
+    border: 1px solid var(--ink);
+    padding: 0.7rem 0.6rem;
+    font-family: inherit;
+    font-size: 0.7rem;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s ease;
+    line-height: 1.3;
+  }
+
+  .profile-btn:hover { background: var(--ink); color: var(--paper); }
+
+  .profile-btn.active {
+    background: var(--cool);
+    color: var(--paper);
+    border-color: var(--cool);
+  }
+
+  .profile-btn .pname {
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: block;
+  }
+
+  .profile-btn .psub {
+    font-size: 0.6rem;
+    opacity: 0.7;
+    margin-top: 0.25rem;
+    letter-spacing: 0.03em;
+    display: block;
+  }
+
+  .profile-btn.active .psub { opacity: 0.9; }
+
+  /* ==== ESTIMATE READOUT ==== */
+  .estimate-display {
+    background: var(--paper);
+    border: 1px solid var(--ink);
+    padding: 0.85rem 1rem;
+    margin-top: 0.75rem;
+    font-size: 0.75rem;
+    line-height: 1.5;
+  }
+
+  .estimate-display .label {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    opacity: 0.6;
+    display: block;
+    margin-bottom: 0.3rem;
+  }
+
+  .estimate-display .big {
+    font-family: 'Fraunces', serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .estimate-display .formula-mini {
+    font-size: 0.65rem;
+    opacity: 0.6;
+    margin-top: 0.4rem;
+    font-style: italic;
+  }
+
+  /* ==== ORIGINAL STATE/BTU INFO ==== */
+  .info-pills {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .stat-pill {
+    background: var(--paper);
+    border: 1px solid var(--ink);
+    padding: 0.55rem 0.7rem;
+    font-size: 0.7rem;
+    line-height: 1.3;
+  }
+
+  .stat-pill .si-label {
+    font-size: 0.58rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    opacity: 0.6;
+    display: block;
+    margin-bottom: 0.15rem;
+  }
+
+  .stat-pill .si-val {
+    font-family: 'Fraunces', serif;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  /* ==== RESULTS PANEL ==== */
+  .results {
+    background: var(--ink);
+    color: var(--paper);
+    border: 1.5px solid var(--ink);
+    padding: 0;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .result-header {
+    background: var(--paper);
+    color: var(--ink);
+    padding: 1rem 1.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1.5px solid var(--ink);
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .result-header h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.4rem;
+    font-weight: 600;
+    font-style: italic;
+  }
+
+  .result-id {
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    opacity: 0.6;
+  }
+
+  .result-body { padding: 1.75rem; }
+
+  .primary-metric {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid rgba(244, 237, 225, 0.15);
+  }
+
+  .metric-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.25em;
+    opacity: 0.6;
+    margin-bottom: 0.5rem;
+  }
+
+  .metric-value {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(2.5rem, 7vw, 4rem);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--warm);
+  }
+
+  .metric-value .currency {
+    font-size: 0.55em;
+    vertical-align: super;
+    margin-right: 0.1em;
+    font-weight: 400;
+  }
+
+  .metric-unit {
+    font-size: 0.9rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 400;
+    color: var(--paper);
+    opacity: 0.7;
+    margin-left: 0.5rem;
+    letter-spacing: 0.1em;
+  }
+
+  .secondary-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .sec-metric {
+    padding: 0.85rem 1rem;
+    background: rgba(244, 237, 225, 0.05);
+    border-left: 2px solid var(--accent);
+  }
+
+  .sec-metric .metric-label { margin-bottom: 0.3rem; }
+
+  .sec-metric .val {
+    font-family: 'Fraunces', serif;
+    font-size: 1.4rem;
+    font-weight: 600;
+  }
+
+  /* CO2 metric uses green */
+  .sec-metric.eco { border-left-color: var(--green); }
+  .sec-metric.eco .val { color: #a4c98c; }
+
+  /* ==== BREAKDOWN BOX ==== */
+  .breakdown {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: rgba(244, 237, 225, 0.04);
+    border: 1px dashed rgba(244, 237, 225, 0.25);
+    font-size: 0.75rem;
+    line-height: 1.7;
+  }
+
+  .breakdown-title {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    opacity: 0.5;
+    margin-bottom: 0.6rem;
+  }
+
+  .breakdown-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 0.2rem 0;
+  }
+
+  .breakdown-row .lbl { opacity: 0.7; }
+  .breakdown-row .val {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+  }
+
+  .breakdown-row.total {
+    border-top: 1px dashed rgba(244, 237, 225, 0.3);
+    margin-top: 0.4rem;
+    padding-top: 0.5rem;
+  }
+
+  .breakdown-row.total .val { color: var(--warm); font-weight: 700; }
+
+  /* ==== CONTEXT FOOTER ==== */
+  .context {
+    margin-top: 1.5rem;
+    padding: 1rem 1.25rem;
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 0.75rem;
+    line-height: 1.6;
+    border-left: 4px solid var(--accent);
+  }
+
+  .context strong { color: var(--accent-deep); }
+
+  /* ==== COST PERIOD TOGGLE ==== */
+  .period-toggle {
+    display: inline-flex;
+    border: 1px solid var(--ink);
+    overflow: hidden;
+    margin-bottom: 1rem;
+  }
+
+  .period-toggle button {
+    background: var(--paper);
+    border: none;
+    padding: 0.4rem 0.9rem;
+    font-family: inherit;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    cursor: pointer;
+    color: var(--ink);
+  }
+
+  .period-toggle button.active { background: var(--ink); color: var(--paper); }
+
+  /* ==== FOOTER ==== */
+  footer {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--ink);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    display: flex;
+    justify-content: space-between;
+    opacity: 0.6;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  /* Animations */
+  @keyframes pulse-warm {
+    0%, 100% { color: var(--warm); }
+    50% { color: #f0c060; }
+  }
+
+  .updating .metric-value { animation: pulse-warm 0.4s ease; }
+
+  /* ============================================== */
+  /* ==== MOBILE MODE ============================ */
+  /* ============================================== */
+  body.mobile-mode {
+    padding: 4rem 0.75rem 1rem;
+    background-size: 16px 16px;
+  }
+
+  body.mobile-mode .container { max-width: 520px; }
+
+  body.mobile-mode header {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+  }
+
+  body.mobile-mode h1 { font-size: 2.2rem; line-height: 1; }
+  body.mobile-mode .subtitle { font-size: 0.78rem; line-height: 1.5; }
+  body.mobile-mode .meta-bar { font-size: 0.6rem; }
+  body.mobile-mode .workspace { grid-template-columns: 1fr; gap: 1.25rem; }
+  body.mobile-mode .panel { padding: 1.25rem 1rem; }
+
+  body.mobile-mode .panel-label {
+    font-size: 0.65rem;
+    margin-bottom: 1rem;
+    letter-spacing: 0.2em;
+  }
+
+  body.mobile-mode .fuel-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+
+  body.mobile-mode .fuel-btn {
+    padding: 0.95rem 0.6rem;
+    font-size: 0.7rem;
+    min-height: 60px;
+  }
+
+  body.mobile-mode .field input,
+  body.mobile-mode .field select {
+    padding: 0.85rem 0.75rem;
+    font-size: 1rem;
+    min-height: 48px;
+  }
+
+  body.mobile-mode .field label {
+    font-size: 0.7rem;
+    margin-bottom: 0.5rem;
+  }
+
+  body.mobile-mode .input-prefix .prefix,
+  body.mobile-mode .input-prefix .suffix {
+    padding: 0.85rem 0.7rem;
+    font-size: 0.85rem;
+  }
+
+  body.mobile-mode .period-toggle button {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.75rem;
+    min-height: 42px;
+  }
+
+  body.mobile-mode .result-header { padding: 0.85rem 1.25rem; }
+  body.mobile-mode .result-header h2 { font-size: 1.15rem; }
+  body.mobile-mode .result-id { font-size: 0.62rem; width: 100%; }
+  body.mobile-mode .result-body { padding: 1.25rem; }
+  body.mobile-mode .metric-value { font-size: 3rem; }
+  body.mobile-mode .secondary-metrics { gap: 0.6rem; }
+  body.mobile-mode .sec-metric { padding: 0.7rem 0.8rem; }
+  body.mobile-mode .sec-metric .val { font-size: 1.1rem; }
+  body.mobile-mode .metric-label { font-size: 0.6rem; letter-spacing: 0.18em; }
+  body.mobile-mode .breakdown { padding: 0.85rem; font-size: 0.7rem; }
+  body.mobile-mode .context { margin-top: 1.25rem; padding: 0.85rem 1rem; font-size: 0.72rem; }
+
+  body.mobile-mode footer {
+    margin-top: 1.5rem;
+    flex-direction: column;
+    gap: 0.4rem;
+    text-align: center;
+    font-size: 0.6rem;
+  }
+
+  body.mobile-mode .field-group { gap: 0.6rem; }
+
+  body.mobile-mode .input-tabs button {
+    padding: 0.7rem 0.4rem;
+    font-size: 0.65rem;
+    min-height: 44px;
+  }
+
+  body.mobile-mode .profile-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  body.mobile-mode .profile-btn {
+    padding: 0.8rem 0.6rem;
+    min-height: 60px;
+    font-size: 0.68rem;
+  }
+
+  body.mobile-mode .estimate-display {
+    padding: 0.75rem 0.85rem;
+    font-size: 0.72rem;
+  }
+
+  body.mobile-mode .estimate-display .big {
+    font-size: 1.25rem;
+  }
+</style>
+</head>
+<body>
+
+<button class="mode-toggle" id="mode-toggle" aria-label="Toggle mobile/desktop view">
+  <span class="icon"></span>
+  <span class="label">Mobile View</span>
+</button>
+
+<div class="container">
+
+  <header>
+    <div class="meta-bar">
+      <span>Thermal Engineering / Doc 04.8</span>
+      <span>Heating Cost Calculator — Basic v14</span>
+      <span id="date-stamp"></span>
+    </div>
+    <h1>What does <em>warmth</em><br>actually cost?</h1>
+    <p class="subtitle">Pick a fuel, enter your home's annual heat demand, and see the real cost to heat your home for a year. Pair this with the heat loss calculator to estimate demand from your home's thermal envelope.</p>
+  </header>
+
+  <main class="workspace">
+
+    <!-- INPUT PANEL -->
+    <section class="panel">
+      <div class="panel-label">01 — Choose Heating Method</div>
+
+      <div class="fuel-grid" id="fuel-grid"></div>
+
+      <div class="panel-label">02 — Annual Heat Demand</div>
+
+      <div class="input-tabs" role="group">
+        <button data-mode="estimate" class="active">Estimate from Home</button>
+        <button data-mode="manual">Enter BTU Directly</button>
+      </div>
+
+      <!-- ESTIMATE MODE -->
+      <div class="mode-panel active" id="mode-estimate">
+        <div class="field" style="margin-bottom: 1rem;">
+          <label>Your state</label>
+          <select id="state-select"></select>
+        </div>
+
+        <label style="font-size:0.65rem; text-transform:uppercase; letter-spacing:0.15em; opacity:0.7; display:block; margin-bottom:0.5rem;">Home profile</label>
+        <div class="profile-grid" id="profile-grid"></div>
+
+        <div class="estimate-display">
+          <span class="label">Estimated annual heat demand</span>
+          <span class="big" id="est-btu">60.0 MMBTU</span>
+          <span class="big" id="est-kwh" style="display: block; margin-top: 0.4rem; font-size: 0.9rem; opacity: 0.8;">17,576 kWh</span>
+          <span class="formula-mini" id="est-formula">UA × HDD × 24</span>
+        </div>
+      </div>
+
+      <!-- MANUAL MODE -->
+      <div class="mode-panel" id="mode-manual">
+        <div class="field field-full" style="margin-bottom: 0.75rem;">
+          <label>Heat needed per year (BTU)</label>
+          <div class="input-prefix">
+            <input type="number" id="demand" value="60000000" step="1000000" min="0" inputmode="numeric">
+            <span class="suffix">BTU / yr</span>
+          </div>
+          <div class="field-hint">
+            Typical US homes: 40M (mild climate, well-insulated) — 100M+ BTU/yr (cold climate, older home).
+            From Heat Loss Calc: multiply BTU/hr × ~2,000 heating hours.
+          </div>
+        </div>
+      </div>
+
+      <div class="info-pills">
+        <div class="stat-pill">
+          <span class="si-label">In therms</span>
+          <span class="si-val" id="demand-therms">600</span>
+        </div>
+        <div class="stat-pill">
+          <span class="si-label">In MMBTU</span>
+          <span class="si-val" id="demand-mmbtu">60</span>
+        </div>
+      </div>
+
+      <div class="panel-label" style="margin-top: 1.5rem;">03 — Fuel Price &amp; Efficiency</div>
+
+      <div class="field" style="margin-bottom: 1rem;">
+        <label>Fuel price <span id="price-source-tag">(US avg)</span></label>
+        <div class="input-prefix">
+          <span class="prefix" id="price-prefix">$</span>
+          <input type="number" id="price" value="1.20" step="0.01" min="0" inputmode="decimal">
+          <span class="suffix" id="price-suffix">/ therm</span>
+        </div>
+        <button class="reset-price-btn" id="reset-price-btn">Reset to default</button>
+      </div>
+
+      <div class="field">
+        <label>System efficiency</label>
+        <div class="input-prefix">
+          <input type="number" id="efficiency" value="90" step="1" min="1" max="600" inputmode="decimal">
+          <span class="suffix" id="eff-suffix">% AFUE</span>
+        </div>
+        <div class="field-hint" id="eff-hint">Annual Fuel Utilization Efficiency. Modern gas furnaces: 80-98%.</div>
+      </div>
+
+    </section>
+
+    <!-- RESULTS PANEL -->
+    <section class="results">
+      <div class="result-header">
+        <h2 id="fuel-name">Natural Gas</h2>
+        <span class="result-id" id="result-id">FURNACE / 90% AFUE</span>
+      </div>
+
+      <div class="result-body">
+        <div class="period-toggle" role="group" style="margin-bottom: 1rem;">
+          <button data-period="year" class="active">Per Year</button>
+          <button data-period="month">Per Month</button>
+          <button data-period="day">Per Day</button>
+        </div>
+
+        <div class="primary-metric">
+          <div class="metric-label">Heating Cost</div>
+          <div class="metric-value">
+            <span class="currency">$</span><span id="cost-val">0</span><span class="metric-unit" id="cost-period">/ year</span>
+          </div>
+        </div>
+
+        <div class="secondary-metrics">
+          <div class="sec-metric">
+            <div class="metric-label">Fuel Used</div>
+            <div class="val"><span id="fuel-amount">0</span> <span style="font-size:0.7rem; opacity:0.7;" id="fuel-amount-unit">therms</span></div>
+          </div>
+          <div class="sec-metric eco">
+            <div class="metric-label">CO₂ Emissions</div>
+            <div class="val"><span id="co2-val">0</span> <span style="font-size:0.7rem; opacity:0.7;">lb / yr</span></div>
+          </div>
+        </div>
+
+        <div class="breakdown">
+          <div class="breakdown-title">Calculation</div>
+          <div class="breakdown-row"><span class="lbl">Heat needed (gross)</span><span class="val" id="bd-gross">60.0 MMBTU</span></div>
+          <div class="breakdown-row"><span class="lbl">÷ System efficiency</span><span class="val" id="bd-eff">90%</span></div>
+          <div class="breakdown-row"><span class="lbl">= Fuel input needed</span><span class="val" id="bd-input">66.7 MMBTU</span></div>
+          <div class="breakdown-row"><span class="lbl">÷ Energy per unit</span><span class="val" id="bd-unitenergy">100,000 BTU/therm</span></div>
+          <div class="breakdown-row"><span class="lbl">= Units of fuel</span><span class="val" id="bd-units">667 therms</span></div>
+          <div class="breakdown-row"><span class="lbl">× Price per unit</span><span class="val" id="bd-price">$1.20/therm</span></div>
+          <div class="breakdown-row total"><span class="lbl">Annual cost</span><span class="val">$<span id="bd-total">800</span></span></div>
+        </div>
+      </div>
+
+      <div class="context" id="context-note">
+        <strong>Natural Gas:</strong> The cheapest mainstream heating fuel in most of the US. High-efficiency condensing furnaces (95%+ AFUE) extract more heat from the same fuel.
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <span>Costs are estimates based on US average prices · 2024</span>
+    <span>Pair with Heat Loss Calculator for precise demand</span>
+  </footer>
+
+</div>
+
+<script>
+  // ==== FUEL DATABASE ====
+  // energy = BTU per unit | unit = display unit | price = $ per unit (US avg ~2024)
+  // eff = default efficiency (%) | effType = 'AFUE' | 'COP' | 'STOVE'
+  // co2 = lb CO2 per MMBTU of fuel input (US EPA factors)
+  const FUELS = [
+    { id: 'natgas',     name: 'Natural Gas',       desc: 'Furnace',                 unit: 'therm',  unitPlural: 'therms',  energy: 100000,  price: 1.20,  eff: 90,  effType: 'AFUE',  effMin: 60,  effMax: 99,   co2: 117,
+      note: 'The cheapest mainstream heating fuel in most of the US. High-efficiency condensing furnaces (95%+ AFUE) extract more heat from the same fuel.' },
+    { id: 'propane',    name: 'Propane',           desc: 'Furnace or boiler',       unit: 'gallon', unitPlural: 'gallons', energy: 91500,   price: 2.80,  eff: 90,  effType: 'AFUE',  effMin: 60,  effMax: 99,   co2: 139,
+      note: 'Common for rural homes without natural gas. Costs 2-3x more per BTU than natural gas. Tank rental and seasonal price swings are big factors.' },
+    { id: 'oil',        name: 'Heating Oil',       desc: '#2 fuel oil boiler',      unit: 'gallon', unitPlural: 'gallons', energy: 138500,  price: 3.80,  eff: 85,  effType: 'AFUE',  effMin: 60,  effMax: 95,   co2: 163,
+      note: 'Common in Northeast US. High BTU density per gallon but higher CO2 emissions and price volatility than gas.' },
+    { id: 'electric',   name: 'Electric',          desc: 'Baseboard / resistance',  unit: 'kWh',    unitPlural: 'kWh',     energy: 3412,    price: 0.16,  eff: 100, effType: 'AFUE',  effMin: 95,  effMax: 100,  co2: 117,
+      note: 'Electric resistance is 100% efficient at the wall but expensive to operate. CO2 depends entirely on your local grid mix — uses US grid avg here.' },
+    { id: 'heatpump',   name: 'Heat Pump (air)',   desc: 'Air-source HP',           unit: 'kWh',    unitPlural: 'kWh',     energy: 3412,    price: 0.16,  eff: 300, effType: 'COP',   effMin: 150, effMax: 500,  co2: 117,
+      note: 'Moves heat instead of generating it. COP of 3.0 = 300% efficient. Performance drops in very cold weather; cold-climate models maintain COP 2.0+ at 5°F.' },
+    { id: 'geothermal', name: 'Geothermal',        desc: 'Ground-source HP',        unit: 'kWh',    unitPlural: 'kWh',     energy: 3412,    price: 0.16,  eff: 400, effType: 'COP',   effMin: 250, effMax: 600,  co2: 117,
+      note: 'Stable ground temps mean consistent COP 3.5-5.0 year-round. Highest install cost ($20-40k) but lowest operating cost and longest lifespan (50+ yr loops).' },
+    { id: 'wood',       name: 'Wood Stove',        desc: 'Cordwood, hardwood',      unit: 'cord',   unitPlural: 'cords',   energy: 20000000,price: 300,   eff: 70,  effType: 'STOVE', effMin: 40,  effMax: 85,   co2: 0,
+      note: 'Cost varies wildly: $200-450/cord purchased, free if you cut your own. Hardwood 20M BTU/cord; softwood ~16M. Considered carbon-neutral if sustainably harvested.' },
+    { id: 'pellet',     name: 'Pellet Stove',      desc: 'Wood pellets',            unit: 'ton',    unitPlural: 'tons',    energy: 16400000,price: 350,   eff: 80,  effType: 'STOVE', effMin: 65,  effMax: 90,   co2: 0,
+      note: 'Cleaner-burning than cordwood with steadier output. Pellets typically $280-400/ton. Considered carbon-neutral.' },
+    { id: 'kerosene',   name: 'Kerosene',          desc: 'Direct-vent heater',      unit: 'gallon', unitPlural: 'gallons', energy: 135000,  price: 4.50,  eff: 95,  effType: 'AFUE',  effMin: 80,  effMax: 99,   co2: 161,
+      note: 'High efficiency but expensive per BTU. Common as supplemental or off-grid heating. Indoor use needs ventilation.' },
+    { id: 'coal',       name: 'Coal Stove',        desc: 'Anthracite',              unit: 'ton',    unitPlural: 'tons',    energy: 25000000,price: 400,   eff: 75,  effType: 'STOVE', effMin: 50,  effMax: 85,   co2: 228,
+      note: 'High BTU density and historically cheap, but highest CO2 emissions of any common fuel. Used regionally in PA, NE, parts of Appalachia.' }
+  ];
+
+  // ==== US STATE HDD DATA ====
+  // Annual heating degree days (base 65°F), statewide averages from NOAA
+  const STATES = [
+    { code: 'AL', name: 'Alabama',        hdd: 2700 },
+    { code: 'AK', name: 'Alaska',         hdd: 10500 },
+    { code: 'AZ', name: 'Arizona',        hdd: 2300 },
+    { code: 'AR', name: 'Arkansas',       hdd: 3200 },
+    { code: 'CA', name: 'California',     hdd: 2400 },
+    { code: 'CO', name: 'Colorado',       hdd: 6000 },
+    { code: 'CT', name: 'Connecticut',    hdd: 5900 },
+    { code: 'DE', name: 'Delaware',       hdd: 4900 },
+    { code: 'DC', name: 'D.C.',           hdd: 4200 },
+    { code: 'FL', name: 'Florida',        hdd: 800 },
+    { code: 'GA', name: 'Georgia',        hdd: 2700 },
+    { code: 'HI', name: 'Hawaii',         hdd: 0 },
+    { code: 'ID', name: 'Idaho',          hdd: 6800 },
+    { code: 'IL', name: 'Illinois',       hdd: 6200 },
+    { code: 'IN', name: 'Indiana',        hdd: 5500 },
+    { code: 'IA', name: 'Iowa',           hdd: 6700 },
+    { code: 'KS', name: 'Kansas',         hdd: 4900 },
+    { code: 'KY', name: 'Kentucky',       hdd: 4600 },
+    { code: 'LA', name: 'Louisiana',      hdd: 1700 },
+    { code: 'ME', name: 'Maine',          hdd: 7800 },
+    { code: 'MD', name: 'Maryland',       hdd: 4700 },
+    { code: 'MA', name: 'Massachusetts',  hdd: 6300 },
+    { code: 'MI', name: 'Michigan',       hdd: 6900 },
+    { code: 'MN', name: 'Minnesota',      hdd: 8200 },
+    { code: 'MS', name: 'Mississippi',    hdd: 2400 },
+    { code: 'MO', name: 'Missouri',       hdd: 4900 },
+    { code: 'MT', name: 'Montana',        hdd: 7800 },
+    { code: 'NE', name: 'Nebraska',       hdd: 6200 },
+    { code: 'NV', name: 'Nevada',         hdd: 4500 },
+    { code: 'NH', name: 'New Hampshire',  hdd: 7200 },
+    { code: 'NJ', name: 'New Jersey',     hdd: 5000 },
+    { code: 'NM', name: 'New Mexico',     hdd: 4300 },
+    { code: 'NY', name: 'New York',       hdd: 6300 },
+    { code: 'NC', name: 'North Carolina', hdd: 3500 },
+    { code: 'ND', name: 'North Dakota',   hdd: 8800 },
+    { code: 'OH', name: 'Ohio',           hdd: 5700 },
+    { code: 'OK', name: 'Oklahoma',       hdd: 3500 },
+    { code: 'OR', name: 'Oregon',         hdd: 4500 },
+    { code: 'PA', name: 'Pennsylvania',   hdd: 5700 },
+    { code: 'RI', name: 'Rhode Island',   hdd: 5800 },
+    { code: 'SC', name: 'South Carolina', hdd: 2400 },
+    { code: 'SD', name: 'South Dakota',   hdd: 7300 },
+    { code: 'TN', name: 'Tennessee',      hdd: 3700 },
+    { code: 'TX', name: 'Texas',          hdd: 1900 },
+    { code: 'UT', name: 'Utah',           hdd: 5800 },
+    { code: 'VT', name: 'Vermont',        hdd: 7600 },
+    { code: 'VA', name: 'Virginia',       hdd: 4000 },
+    { code: 'WA', name: 'Washington',     hdd: 4700 },
+    { code: 'WV', name: 'West Virginia',  hdd: 5200 },
+    { code: 'WI', name: 'Wisconsin',      hdd: 7200 },
+    { code: 'WY', name: 'Wyoming',        hdd: 7400 }
+  ];
+
+  // ==== HOME PROFILES ====
+  // UA = whole-home heat loss coefficient (BTU/hr per °F of temperature difference)
+  // Formula: Annual heat demand BTU = UA × HDD × 24
+  // UA values come from typical heat loss calcs for each home archetype
+  const PROFILES = [
+    { id: 'small_eff',   name: 'Small efficient',  desc: '~1,200 sqft, modern',   ua: 280 },
+    { id: 'avg_modern',  name: 'Average modern',   desc: '~2,000 sqft, code',     ua: 480 },
+    { id: 'avg_older',   name: 'Average older',    desc: '~2,000 sqft, 1970s+',   ua: 720 },
+    { id: 'large_avg',   name: 'Large average',    desc: '~3,000 sqft, code',     ua: 720 },
+    { id: 'large_old',   name: 'Large older',      desc: '~3,000 sqft, leaky',    ua: 1100 },
+    { id: 'drafty',      name: 'Drafty / older',   desc: 'Pre-1960s, poor insul', ua: 950 }
+  ];
+  let state = {
+    fuelId: 'natgas',
+    demand: 60000000,    // BTU/year
+    price: 1.20,
+    efficiency: 90,
+    period: 'year',
+    priceCustom: false,
+    inputMode: 'estimate',  // 'estimate' or 'manual'
+    stateCode: 'OH',
+    profileId: 'avg_modern',
+    manualDemand: 60000000,  // separate so manual entry persists when switching back
+    customPrices: {}  // tracks custom prices per fuel: { 'natgas': 1.50, 'propane': 2.80, ... }
+  };
+
+  // ==== MOBILE/DESKTOP TOGGLE ====
+  const modeToggle = document.getElementById('mode-toggle');
+  const modeLabel = modeToggle.querySelector('.label');
+
+  function autoDetectMobile() { return window.innerWidth <= 600; }
+
+  function applyMode(mobile) {
+    document.body.classList.toggle('mobile-mode', mobile);
+    modeLabel.textContent = mobile ? 'Desktop View' : 'Mobile View';
+  }
+
+  applyMode(autoDetectMobile());
+
+  modeToggle.addEventListener('click', () => {
+    const isMobile = document.body.classList.contains('mobile-mode');
+    applyMode(!isMobile);
+  });
+
+  // ==== FUEL MONTHLY COST CALCULATOR ====
+  function calculateFuelMonthlyCost(fuel) {
+    const demandBTU = state.demand;
+    const effDecimal = fuel.eff / 100;
+    const fuelInputBTU = effDecimal > 0 ? demandBTU / effDecimal : 0;
+    const fuelUnits = fuel.energy > 0 ? fuelInputBTU / fuel.energy : 0;
+    // Use custom price if available, otherwise use fuel default
+    const price = state.customPrices[fuel.id] !== undefined ? state.customPrices[fuel.id] : fuel.price;
+    const annualCost = fuelUnits * price;
+    const monthlyCost = annualCost / 12;
+    return monthlyCost;
+  }
+
+  function getFuelButtonHTML(f) {
+    const monthlyCost = calculateFuelMonthlyCost(f);
+    const costStr = monthlyCost >= 10 ? Math.round(monthlyCost).toLocaleString() : monthlyCost.toFixed(2);
+    return `<span class="fuel-name">${f.name}</span><span class="sub">${f.desc}</span><span class="monthly-cost">$${costStr} / mo</span>`;
+  }
+
+  function updateFuelButtonPrices() {
+    document.querySelectorAll('.fuel-btn').forEach(btn => {
+      const fuelId = btn.dataset.id;
+      const fuel = FUELS.find(f => f.id === fuelId);
+      if (fuel) {
+        btn.innerHTML = getFuelButtonHTML(fuel);
+      }
+    });
+  }
+
+  function sortFuelButtonsByPrice() {
+    const grid = document.getElementById('fuel-grid');
+    const buttons = Array.from(grid.querySelectorAll('.fuel-btn'));
+    
+    // Sort buttons by monthly cost (cheapest first)
+    buttons.sort((a, b) => {
+      const fuelA = FUELS.find(f => f.id === a.dataset.id);
+      const fuelB = FUELS.find(f => f.id === b.dataset.id);
+      const costA = calculateFuelMonthlyCost(fuelA);
+      const costB = calculateFuelMonthlyCost(fuelB);
+      return costA - costB;
+    });
+    
+    // Remove all buttons and re-add them in sorted order
+    buttons.forEach(btn => grid.removeChild(btn));
+    buttons.forEach(btn => grid.appendChild(btn));
+  }
+
+  // ==== INIT FUEL GRID ====
+  const grid = document.getElementById('fuel-grid');
+  FUELS.forEach(f => {
+    const btn = document.createElement('button');
+    btn.className = 'fuel-btn' + (f.id === state.fuelId ? ' active' : '');
+    btn.dataset.id = f.id;
+    btn.innerHTML = getFuelButtonHTML(f);
+    btn.addEventListener('click', () => selectFuel(f.id));
+    grid.appendChild(btn);
+  });
+
+  function selectFuel(id) {
+    state.fuelId = id;
+    const fuel = FUELS.find(f => f.id === id);
+
+    document.querySelectorAll('.fuel-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.id === id);
+    });
+
+    // Check if this fuel has a custom price saved
+    if (state.customPrices[id] !== undefined) {
+      state.price = state.customPrices[id];
+      document.getElementById('price').value = state.customPrices[id].toFixed(state.customPrices[id] < 1 ? 3 : 2);
+      document.getElementById('price-source-tag').textContent = '(custom)';
+      document.getElementById('price-source-tag').classList.add('custom');
+    } else {
+      // Use fuel's default price
+      state.price = fuel.price;
+      document.getElementById('price').value = fuel.price.toFixed(fuel.price < 1 ? 3 : 2);
+      document.getElementById('price-source-tag').textContent = '(US avg)';
+      document.getElementById('price-source-tag').classList.remove('custom');
+    }
+
+    // Always update efficiency to fuel defaults
+    state.efficiency = fuel.eff;
+    document.getElementById('efficiency').value = fuel.eff;
+    document.getElementById('eff-suffix').textContent = effSuffix(fuel);
+    document.getElementById('eff-hint').textContent = effHint(fuel);
+
+    // Update price suffix to match new fuel's unit
+    document.getElementById('price-suffix').textContent = `/ ${fuel.unit}`;
+
+    update();
+  }
+
+  function effSuffix(fuel) {
+    if (fuel.effType === 'COP') return '% (COP × 100)';
+    if (fuel.effType === 'STOVE') return '% (stove eff.)';
+    return '% AFUE';
+  }
+
+  function effHint(fuel) {
+    if (fuel.effType === 'COP') {
+      return `COP × 100. Air-source: 250-450%. Geothermal: 350-550%. Cold-climate models stay above 200% at 5°F.`;
+    }
+    if (fuel.effType === 'STOVE') {
+      return `Stove combustion efficiency. Modern EPA-certified stoves: 70-85%. Old open fireplaces: under 30%.`;
+    }
+    return `Annual Fuel Utilization Efficiency. Standard: 80%. High-efficiency condensing: 90-98%.`;
+  }
+
+  // ==== INIT STATE DROPDOWN ====
+  const stateSelect = document.getElementById('state-select');
+  STATES.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.code;
+    opt.textContent = `${s.name} — ${s.hdd.toLocaleString()} HDD`;
+    if (s.code === state.stateCode) opt.selected = true;
+    stateSelect.appendChild(opt);
+  });
+
+  stateSelect.addEventListener('change', e => {
+    state.stateCode = e.target.value;
+    recalculateEstimate();
+    update();
+  });
+
+  // ==== INIT PROFILE GRID ====
+  const profileGrid = document.getElementById('profile-grid');
+  PROFILES.forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = 'profile-btn' + (p.id === state.profileId ? ' active' : '');
+    btn.dataset.id = p.id;
+    btn.innerHTML = `<span class="pname">${p.name}</span><span class="psub">${p.desc}</span>`;
+    btn.addEventListener('click', () => selectProfile(p.id));
+    profileGrid.appendChild(btn);
+  });
+
+  function selectProfile(id) {
+    state.profileId = id;
+    document.querySelectorAll('.profile-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.id === id);
+    });
+    recalculateEstimate();
+    update();
+  }
+
+  // ==== INPUT MODE TABS ====
+  document.querySelectorAll('.input-tabs button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mode = btn.dataset.mode;
+      state.inputMode = mode;
+
+      document.querySelectorAll('.input-tabs button').forEach(b =>
+        b.classList.toggle('active', b === btn)
+      );
+
+      document.getElementById('mode-estimate').classList.toggle('active', mode === 'estimate');
+      document.getElementById('mode-manual').classList.toggle('active', mode === 'manual');
+
+      if (mode === 'estimate') {
+        recalculateEstimate();
+      } else {
+        // Pull current estimate as starting point if user hasn't manually edited yet
+        document.getElementById('demand').value = state.demand;
+        state.manualDemand = state.demand;
+      }
+      update();
+    });
+  });
+
+  // Recalculates demand from state HDD + home profile
+  function recalculateEstimate() {
+    const s = STATES.find(x => x.code === state.stateCode);
+    const p = PROFILES.find(x => x.id === state.profileId);
+    if (!s || !p) return;
+
+    // Annual heat demand BTU = UA (BTU/hr·°F) × HDD (°F-days) × 24 hr/day
+    const demandBTU = p.ua * s.hdd * 24;
+    state.demand = demandBTU;
+
+    // Convert to kWh: 1 kWh = 3,412 BTU
+    const demandKWh = demandBTU / 3412;
+
+    // Update display
+    document.getElementById('est-btu').textContent = (demandBTU / 1000000).toFixed(1) + ' MMBTU';
+    document.getElementById('est-formula').textContent =
+      `${p.ua} BTU/hr·°F × ${s.hdd.toLocaleString()} HDD × 24 hr = ${(demandBTU/1000000).toFixed(1)}M BTU/yr`;
+    document.getElementById('est-kwh').textContent = Math.round(demandKWh).toLocaleString() + ' kWh';
+  }
+
+  // ==== PERIOD TOGGLE ====
+  document.querySelectorAll('.period-toggle button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.period = btn.dataset.period;
+      document.querySelectorAll('.period-toggle button').forEach(b =>
+        b.classList.toggle('active', b === btn)
+      );
+      update();
+    });
+  });
+
+  // ==== INPUT BINDINGS ====
+  document.getElementById('demand').addEventListener('input', e => {
+    state.demand = parseFloat(e.target.value) || 0;
+    state.manualDemand = state.demand;
+    update();
+  });
+
+  document.getElementById('price').addEventListener('input', e => {
+    state.price = parseFloat(e.target.value) || 0;
+    // Save this custom price for the current fuel
+    state.customPrices[state.fuelId] = state.price;
+    document.getElementById('price-source-tag').textContent = '(custom)';
+    document.getElementById('price-source-tag').classList.add('custom');
+    update();
+  });
+
+  document.getElementById('reset-price-btn').addEventListener('click', () => {
+    const fuel = FUELS.find(f => f.id === state.fuelId);
+    if (fuel) {
+      // Delete custom price for this fuel and reset to default
+      delete state.customPrices[state.fuelId];
+      state.price = fuel.price;
+      document.getElementById('price').value = fuel.price.toFixed(fuel.price < 1 ? 3 : 2);
+      document.getElementById('price-source-tag').textContent = '(US avg)';
+      document.getElementById('price-source-tag').classList.remove('custom');
+      update();
+    }
+  });
+
+  document.getElementById('efficiency').addEventListener('input', e => {
+    state.efficiency = parseFloat(e.target.value) || 0;
+    update();
+  });
+
+  // ==== CALCULATE & RENDER ====
+  function update() {
+    const fuel = FUELS.find(f => f.id === state.fuelId);
+
+    // Demand in BTU
+    const demandBTU = state.demand;
+
+    // Fuel input needed (gross BTU): demand / efficiency
+    const effDecimal = state.efficiency / 100;
+    const fuelInputBTU = effDecimal > 0 ? demandBTU / effDecimal : 0;
+
+    // Convert to fuel units
+    const fuelUnits = fuel.energy > 0 ? fuelInputBTU / fuel.energy : 0;
+
+    // Annual cost
+    const annualCost = fuelUnits * state.price;
+
+    // Period multipliers
+    const periodMult = state.period === 'year' ? 1
+      : state.period === 'month' ? 1/12
+      : 1/365;
+    const periodLabel = state.period === 'year' ? '/ year'
+      : state.period === 'month' ? '/ month'
+      : '/ day';
+
+    const displayCost = annualCost * periodMult;
+    const displayUnits = fuelUnits * periodMult;
+
+    // CO2 emissions (lb/yr based on fuel input MMBTU)
+    const fuelInputMMBTU = fuelInputBTU / 1000000;
+    const co2Lb = fuelInputMMBTU * fuel.co2;
+
+    // ==== RENDER PRIMARY METRICS ====
+    document.getElementById('cost-val').textContent = formatMoney(displayCost);
+    document.getElementById('cost-period').textContent = periodLabel;
+    document.getElementById('fuel-amount').textContent = formatNumber(displayUnits);
+    document.getElementById('fuel-amount-unit').textContent = displayUnits === 1 ? fuel.unit : fuel.unitPlural;
+    document.getElementById('co2-val').textContent = co2Lb >= 1000 ? Math.round(co2Lb).toLocaleString() : co2Lb.toFixed(0);
+
+    document.getElementById('fuel-name').textContent = fuel.name;
+    document.getElementById('result-id').textContent = `${fuel.desc.toUpperCase()} / ${state.efficiency}% ${fuel.effType}`;
+
+    // Demand display pills
+    document.getElementById('demand-therms').textContent = (demandBTU / 100000).toFixed(0);
+    document.getElementById('demand-mmbtu').textContent = (demandBTU / 1000000).toFixed(1);
+
+    // ==== BREAKDOWN ====
+    document.getElementById('bd-gross').textContent = (demandBTU / 1000000).toFixed(1) + ' MMBTU';
+    document.getElementById('bd-eff').textContent = state.efficiency + '%';
+    document.getElementById('bd-input').textContent = fuelInputMMBTU.toFixed(1) + ' MMBTU';
+    document.getElementById('bd-unitenergy').textContent = fuel.energy.toLocaleString() + ' BTU/' + fuel.unit;
+    document.getElementById('bd-units').textContent = formatNumber(fuelUnits) + ' ' + (fuelUnits === 1 ? fuel.unit : fuel.unitPlural);
+    document.getElementById('bd-price').textContent = '$' + state.price.toFixed(state.price < 1 ? 3 : 2) + '/' + fuel.unit;
+    document.getElementById('bd-total').textContent = formatMoney(annualCost);
+
+    // Context note
+    document.getElementById('context-note').innerHTML = `<strong>${fuel.name}:</strong> ${fuel.note}`;
+
+    // Update fuel button prices and sort by cost
+    updateFuelButtonPrices();
+    sortFuelButtonsByPrice();
+
+    // Pulse
+    document.querySelector('.results').classList.add('updating');
+    setTimeout(() => document.querySelector('.results').classList.remove('updating'), 400);
+  }
+
+  function formatMoney(n) {
+    if (!isFinite(n)) return '—';
+    if (n >= 1000) return Math.round(n).toLocaleString();
+    if (n >= 100) return n.toFixed(0);
+    if (n >= 10) return n.toFixed(2);
+    return n.toFixed(2);
+  }
+
+  function formatNumber(n) {
+    if (!isFinite(n)) return '—';
+    if (n >= 10000) return Math.round(n).toLocaleString();
+    if (n >= 1000) return n.toFixed(0);
+    if (n >= 100) return n.toFixed(0);
+    if (n >= 10) return n.toFixed(1);
+    if (n >= 1) return n.toFixed(2);
+    return n.toFixed(3);
+  }
+
+  // Date stamp
+  const d = new Date();
+  document.getElementById('date-stamp').textContent =
+    d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' }).toUpperCase();
+
+  update();
+</script>
+
+</body>
+</html>
