@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tip Calculator</title>
+<style>
+  :root {
+    --bg: #CFDDC9;
+    --paper: #EAF3E5;
+    --ink: #1D2A47;
+    --ink-soft: #55627F;
+    --rule: #A9BDA3;
+    --red: #C2352B;
+    --track: #C3D4BD;
+    --font: "Bricolage Grotesque", ui-rounded, "Avenir Next", "Segoe UI", system-ui, sans-serif;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0F1513;
+      --paper: #1A2420;
+      --ink: #DDE8DA;
+      --ink-soft: #94A596;
+      --rule: #34443C;
+      --red: #FF7468;
+      --track: #2B3A33;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0F1513;
+    --paper: #1A2420;
+    --ink: #DDE8DA;
+    --ink-soft: #94A596;
+    --rule: #34443C;
+    --red: #FF7468;
+    --track: #2B3A33;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font);
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    display: flex;
+    justify-content: center;
+    padding: 10px 12px 14px;
+  }
+
+  .check {
+    width: 100%;
+    max-width: 440px;
+    background: var(--paper);
+    border-radius: 6px;
+    padding: 14px 16px 14px;
+    box-shadow: 0 1px 0 var(--rule), 0 10px 30px -18px rgba(0,0,0,.45);
+    align-self: flex-start;
+  }
+
+  .section { padding: 10px 0; border-top: 2px dashed var(--rule); }
+  .section:first-child { border-top: 0; padding-top: 0; }
+
+  label, .label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    margin-bottom: 4px;
+  }
+
+  /* Bill */
+  .bill {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    border-bottom: 2.5px solid var(--ink);
+    padding-bottom: 2px;
+  }
+  .bill .cur { font-size: 22px; font-weight: 600; color: var(--ink-soft); }
+  .bill input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    font: 800 34px/1.1 var(--font);
+    letter-spacing: -0.02em;
+    padding: 0;
+    outline: none;
+  }
+  .bill input::placeholder { color: var(--rule); }
+  .bill:focus-within { border-bottom-color: var(--red); }
+
+  /* Tip slider */
+  .tip-head { display: flex; align-items: baseline; justify-content: space-between; }
+  .tip-head .label { margin: 0; }
+  .tip-pct { font-size: 36px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+  .tip-pct small { font-size: 20px; font-weight: 600; margin-left: 2px; color: var(--ink-soft); }
+  .tip-amt { display: flex; align-items: baseline; gap: 2px; color: var(--red); border-bottom: 2px dashed var(--red); padding-bottom: 1px; }
+  .tip-amt .cur { font-size: 18px; font-weight: 600; }
+  .tip-amt input {
+    width: 92px;
+    border: 0;
+    background: transparent;
+    color: var(--red);
+    font: 700 20px/1.1 var(--font);
+    text-align: right;
+    padding: 0;
+    outline: none;
+    font-variant-numeric: tabular-nums;
+  }
+  .tip-amt:focus-within { border-bottom-style: solid; }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 40px;
+    margin: 4px 0 0;
+    background: transparent;
+    touch-action: pan-y;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-runnable-track {
+    height: 10px;
+    border-radius: 5px;
+    background: linear-gradient(to right, var(--red) 0, var(--red) var(--fill, 45%), var(--track) var(--fill, 45%), var(--track) 100%);
+  }
+  input[type=range]::-moz-range-track { height: 10px; border-radius: 5px; background: var(--track); }
+  input[type=range]::-moz-range-progress { height: 10px; border-radius: 5px; background: var(--red); }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 34px;
+    height: 34px;
+    margin-top: -12px;
+    border-radius: 50%;
+    background: var(--paper);
+    border: 4px solid var(--red);
+    box-shadow: 0 2px 6px rgba(0,0,0,.3);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--paper);
+    border: 4px solid var(--red);
+    box-shadow: 0 2px 6px rgba(0,0,0,.3);
+  }
+  input[type=range]:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; border-radius: 8px; }
+
+  .ticks { display: flex; justify-content: space-between; font-size: 11px; color: var(--ink-soft); padding: 0 4px; margin-top: -4px; }
+
+  /* Buttons */
+  .row { display: flex; gap: 8px; }
+  .btn {
+    flex: 1;
+    min-height: 44px;
+    border: 2px solid var(--ink);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--ink);
+    font: 700 15px var(--font);
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: transform .08s ease, background .12s ease, color .12s ease;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+  .btn:focus-visible { outline: 3px solid var(--red); outline-offset: 2px; }
+
+  /* Total sits directly under the round buttons */
+  .total-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-top: 3px double var(--ink);
+    margin-top: 10px;
+    padding-top: 6px;
+  }
+  .total-line .name { font-size: 15px; font-weight: 600; color: var(--ink-soft); }
+  .grand { font-size: 40px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; font-variant-numeric: tabular-nums; }
+  .hint { font-size: 12px; color: var(--ink-soft); margin: 2px 0 0; min-height: 16px; }
+
+  /* Split */
+  .split { display: flex; align-items: center; gap: 8px; }
+  .split .label { margin: 0; flex: 0 0 auto; }
+  .split .btn { flex: 0 0 44px; min-height: 40px; font-size: 22px; line-height: 1; padding: 0; }
+  .split output { font-size: 22px; font-weight: 800; min-width: 30px; text-align: center; font-variant-numeric: tabular-nums; }
+  .each { margin-left: auto; font-size: 15px; font-weight: 600; color: var(--ink-soft); text-align: right; }
+  .each b { font-size: 20px; font-weight: 800; color: var(--red); margin-left: 4px; font-variant-numeric: tabular-nums; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main class="check">
+
+  <section class="section">
+    <label for="bill">Bill before tip</label>
+    <div class="bill">
+      <span class="cur" aria-hidden="true">$</span>
+      <input id="bill" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" aria-label="Bill amount in dollars">
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="tip-head">
+      <div>
+        <span class="label" id="tip-label">Tip</span>
+        <div class="tip-pct"><span id="pct">20</span><small>%</small></div>
+      </div>
+      <div class="tip-amt"><span class="cur" aria-hidden="true">$</span><input id="tipAmt" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" aria-label="Tip amount in dollars"></div>
+    </div>
+    <input id="slider" type="range" min="0" max="40" step="1" value="20" aria-labelledby="tip-label">
+    <div class="ticks" aria-hidden="true"><span>0%</span><span>10%</span><span>20%</span><span>30%</span><span>40%</span></div>
+  </section>
+
+  <section class="section">
+    <div class="row">
+      <button class="btn" id="down" type="button" aria-pressed="true">Round down</button>
+      <button class="btn" id="up" type="button" aria-pressed="false">Round up</button>
+    </div>
+    <div class="total-line">
+      <span class="name">Total</span>
+      <span class="grand" id="outTotal">$0.00</span>
+    </div>
+    <p class="hint" id="roundHint" aria-live="polite"></p>
+  </section>
+
+  <section class="section">
+    <div class="split">
+      <span class="label">Split</span>
+      <button class="btn" id="minus" type="button" aria-label="Fewer people">&minus;</button>
+      <output id="people" aria-live="polite">1</output>
+      <button class="btn" id="plus" type="button" aria-label="More people">+</button>
+      <div class="each" id="eachRow" hidden>each<b id="outEach">$0.00</b></div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+(function () {
+  var fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+  var $ = function (id) { return document.getElementById(id); };
+
+  var state = { billC: 0, pct: 20, tipMode: 'pct', tipC: 0, round: 'down', people: 1 };
+
+  var els = {
+    bill: $('bill'), slider: $('slider'), pct: $('pct'), tipAmt: $('tipAmt'),
+    up: $('up'), down: $('down'), hint: $('roundHint'),
+    minus: $('minus'), plus: $('plus'), people: $('people'),
+    outTotal: $('outTotal'), eachRow: $('eachRow'), outEach: $('outEach')
+  };
+
+  function money(cents) { return fmt.format(cents / 100); }
+
+  function pctText(n) { return n.toFixed(1).replace(/\.0$/, ''); }
+
+  function render() {
+    var billC = state.billC;
+    var amtMode = state.tipMode === 'amt';
+    var baseTipC = amtMode ? state.tipC : Math.round(billC * state.pct / 100);
+    var totalC = billC + baseTipC;
+    var note = '';
+
+    if (state.round === 'up') {
+      var up = Math.ceil(totalC / 100) * 100;
+      if (up === totalC) note = 'Already a whole dollar.';
+      totalC = up;
+    } else if (state.round === 'down') {
+      var down = Math.floor(totalC / 100) * 100;
+      if (down < billC) { down = billC; note = 'Can\u2019t go below the bill, so no tip is left.'; }
+      else if (down === totalC) note = 'Already a whole dollar.';
+      totalC = down;
+    }
+
+    var tipC = totalC - billC;
+
+    if (state.round && billC > 0 && !note) {
+      note = 'Tip works out to ' + money(tipC) + ' (' + pctText(tipC / billC * 100) + '%).';
+    }
+
+    var shownPct = amtMode ? (billC > 0 ? baseTipC / billC * 100 : 0) : state.pct;
+    var sliderVal = Math.max(0, Math.min(40, Math.round(shownPct)));
+
+    els.pct.textContent = amtMode ? pctText(shownPct) : state.pct;
+    els.slider.value = sliderVal;
+    els.slider.style.setProperty('--fill', (sliderVal / 40 * 100) + '%');
+
+    if (!amtMode && document.activeElement !== els.tipAmt) {
+      els.tipAmt.value = billC > 0 ? (tipC / 100).toFixed(2) : '';
+    }
+    els.outTotal.textContent = money(totalC);
+
+    els.up.setAttribute('aria-pressed', String(state.round === 'up'));
+    els.down.setAttribute('aria-pressed', String(state.round === 'down'));
+    els.hint.textContent = note;
+
+    els.people.textContent = state.people;
+    if (state.people > 1) {
+      els.eachRow.hidden = false;
+      els.outEach.textContent = money(Math.round(totalC / state.people));
+    } else {
+      els.eachRow.hidden = true;
+    }
+  }
+
+  function readMoney(el) {
+    var v = el.value.replace(/[^0-9.]/g, '');
+    var parts = v.split('.');
+    if (parts.length > 2) v = parts[0] + '.' + parts.slice(1).join('');
+    parts = v.split('.');
+    if (parts[1] && parts[1].length > 2) v = parts[0] + '.' + parts[1].slice(0, 2);
+    if (v !== el.value) el.value = v;
+    var n = parseFloat(v);
+    return { text: v, cents: isNaN(n) ? 0 : Math.round(n * 100) };
+  }
+
+  els.bill.addEventListener('input', function () {
+    state.billC = readMoney(els.bill).cents;
+    render();
+  });
+
+  els.tipAmt.addEventListener('input', function () {
+    var r = readMoney(els.tipAmt);
+    if (r.text === '') {
+      state.tipMode = 'pct';
+    } else {
+      state.tipMode = 'amt';
+      state.tipC = r.cents;
+    }
+    render();
+  });
+  els.tipAmt.addEventListener('focus', function () { els.tipAmt.select(); });
+  els.tipAmt.addEventListener('blur', function () { render(); });
+
+  els.slider.addEventListener('input', function () {
+    state.pct = parseInt(els.slider.value, 10);
+    state.tipMode = 'pct';
+    render();
+  });
+
+  function toggleRound(kind) {
+    state.round = state.round === kind ? null : kind;
+    render();
+  }
+  els.up.addEventListener('click', function () { toggleRound('up'); });
+  els.down.addEventListener('click', function () { toggleRound('down'); });
+
+  els.minus.addEventListener('click', function () { state.people = Math.max(1, state.people - 1); render(); });
+  els.plus.addEventListener('click', function () { state.people = Math.min(20, state.people + 1); render(); });
+
+  render();
+})();
+</script>
+</body>
+</html>
